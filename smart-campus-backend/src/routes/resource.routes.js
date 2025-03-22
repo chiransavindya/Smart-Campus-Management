@@ -106,13 +106,52 @@ router.get('/:id', protect, (req, res) => {
 
 // Get resource availability
 router.get('/:id/availability', protect, (req, res) => {
-  const { startDate, endDate } = req.query;
-  
-  // Return mock availability data
-  res.json({
-    available: true,
-    conflicts: []
-  });
+  try {
+    const resourceId = req.params.id;
+    const { startDate, endDate } = req.query;
+    
+    // Validate required parameters
+    if (!startDate || !endDate) {
+      return res.status(400).json({ 
+        message: 'Start date and end date are required for availability check' 
+      });
+    }
+    
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    
+    // Validate date formats
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+      return res.status(400).json({ 
+        message: 'Invalid date format. Please provide valid ISO date strings.' 
+      });
+    }
+    
+    // Check if end is after start
+    if (end <= start) {
+      return res.status(400).json({ 
+        message: 'End date must be after start date' 
+      });
+    }
+    
+    // In a real app, you would query database for conflicts here
+    console.log(`Checking availability for resource ${resourceId} from ${startDate} to ${endDate}`);
+    
+    // Simulate availability check (always available for demo)
+    res.json({
+      resourceId,
+      startDate,
+      endDate,
+      available: true,
+      conflicts: []
+    });
+  } catch (error) {
+    console.error(`Error checking resource availability:`, error);
+    res.status(500).json({ 
+      message: 'Failed to check resource availability', 
+      error: error.message 
+    });
+  }
 });
 
 module.exports = router; 

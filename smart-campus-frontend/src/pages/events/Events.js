@@ -19,8 +19,8 @@ import {
     TextField,
     Typography,
 } from '@mui/material';
-import React, { useEffect, useState } from 'react';
-import { useForm } from 'react-hook-form';
+import React, { useCallback, useEffect, useState } from 'react';
+import { Controller, useForm } from 'react-hook-form';
 import { useAuth } from '../../context/AuthContext';
 import eventService from '../../services/api/eventService';
 
@@ -34,26 +34,47 @@ const Events = () => {
     register,
     handleSubmit,
     reset,
+    control,
     formState: { errors },
   } = useForm();
 
-  useEffect(() => {
-    loadEvents();
-  }, []);
-
-  const loadEvents = async () => {
+  const loadEvents = useCallback(async () => {
     try {
       const data = await eventService.getAllEvents();
-      setEvents(data);
+      setEvents(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Error loading events:', error);
+      setEvents([]);
     }
+  }, []);
+
+  useEffect(() => {
+    loadEvents();
+  }, [loadEvents]);
+
+  // Helper to format date for datetime-local input
+  const formatDateTimeForInput = (dateString) => {
+    if (!dateString) return '';
+    
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return '';
+    
+    // Format: YYYY-MM-DDThh:mm
+    return new Date(date.getTime() - (date.getTimezoneOffset() * 60000))
+      .toISOString()
+      .slice(0, 16);
   };
 
   const handleOpen = (event = null) => {
     setSelectedEvent(event);
     if (event) {
-      reset(event);
+      // Format dates for the form
+      const formattedEvent = {
+        ...event,
+        startDate: formatDateTimeForInput(event.startDate),
+        endDate: formatDateTimeForInput(event.endDate)
+      };
+      reset(formattedEvent);
     } else {
       reset({});
     }
@@ -68,10 +89,17 @@ const Events = () => {
 
   const onSubmit = async (data) => {
     try {
+      // Ensure dates are properly parsed into Date objects
+      const formattedData = {
+        ...data,
+        startDate: data.startDate ? new Date(data.startDate).toISOString() : null,
+        endDate: data.endDate ? new Date(data.endDate).toISOString() : null,
+      };
+      
       if (selectedEvent) {
-        await eventService.updateEvent(selectedEvent.id, data);
+        await eventService.updateEvent(selectedEvent.id, formattedData);
       } else {
-        await eventService.createEvent(data);
+        await eventService.createEvent(formattedData);
       }
       loadEvents();
       handleClose();
@@ -180,25 +208,53 @@ const Events = () => {
               error={!!errors.location}
               helperText={errors.location?.message}
             />
-            <TextField
-              fullWidth
-              label="Start Date"
-              margin="normal"
-              type="datetime-local"
-              InputLabelProps={{ shrink: true }}
-              {...register('startDate', { required: 'Start date is required' })}
-              error={!!errors.startDate}
-              helperText={errors.startDate?.message}
+            <Controller
+              name="startDate"
+              control={control}
+              rules={{ 
+                required: 'Start date is required',
+                validate: {
+                  hasTimeComponent: value => (!!value && value.includes('T')) || 'Please select both date and time'
+                }
+              }}
+              render={({ field }) => (
+                <TextField
+                  {...field}
+                  fullWidth
+                  label="Start Date"
+                  margin="normal"
+                  type="datetime-local"
+                  InputLabelProps={{ shrink: true }}
+                  error={!!errors.startDate}
+                  helperText={errors.startDate?.message}
+                />
+              )}
             />
-            <TextField
-              fullWidth
-              label="End Date"
-              margin="normal"
-              type="datetime-local"
-              InputLabelProps={{ shrink: true }}
-              {...register('endDate', { required: 'End date is required' })}
-              error={!!errors.endDate}
-              helperText={errors.endDate?.message}
+            <Controller
+              name="endDate"
+              control={control}
+              rules={{ 
+                required: 'End date is required',
+                validate: {
+                  hasTimeComponent: value => (!!value && value.includes('T')) || 'Please select both date and time',
+                  isAfterStart: (value, { startDate }) => {
+                    if (!startDate || !value) return true;
+                    return new Date(value) > new Date(startDate) || 'End date must be after start date';
+                  }
+                }
+              }}
+              render={({ field }) => (
+                <TextField
+                  {...field}
+                  fullWidth
+                  label="End Date"
+                  margin="normal"
+                  type="datetime-local"
+                  InputLabelProps={{ shrink: true }}
+                  error={!!errors.endDate}
+                  helperText={errors.endDate?.message}
+                />
+              )}
             />
             <TextField
               fullWidth

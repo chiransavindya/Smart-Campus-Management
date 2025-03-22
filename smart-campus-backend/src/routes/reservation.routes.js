@@ -49,7 +49,7 @@ router.get('/resources', protect, (req, res) => {
   ]);
 });
 
-// Placeholder routes for reservations
+// Get user's reservations
 router.get('/', protect, (req, res) => {
   res.json([
     {
@@ -71,7 +71,7 @@ router.get('/', protect, (req, res) => {
   ]);
 });
 
-// More routes will be implemented later
+// Get reservation by ID
 router.get('/:id', protect, (req, res) => {
   res.json({
     id: req.params.id,
@@ -81,6 +81,134 @@ router.get('/:id', protect, (req, res) => {
     purpose: 'Study session',
     status: 'approved'
   });
+});
+
+// Create reservation
+router.post('/', protect, (req, res) => {
+  try {
+    const { resourceId, startTime, endTime, purpose } = req.body;
+    
+    // Validate required fields
+    if (!resourceId) {
+      return res.status(400).json({ message: 'Resource ID is required' });
+    }
+    
+    if (!startTime) {
+      return res.status(400).json({ message: 'Start time is required' });
+    }
+    
+    if (!endTime) {
+      return res.status(400).json({ message: 'End time is required' });
+    }
+    
+    if (!purpose) {
+      return res.status(400).json({ message: 'Purpose is required' });
+    }
+    
+    // Check if end time is after start time
+    if (new Date(endTime) <= new Date(startTime)) {
+      return res.status(400).json({ message: 'End time must be after start time' });
+    }
+    
+    // In a real app, you would save to database here
+    console.log('Creating reservation:', req.body);
+    
+    // Return created reservation with mock ID
+    res.status(201).json({
+      id: Date.now().toString(),
+      resourceId,
+      startTime,
+      endTime,
+      purpose,
+      status: 'pending',
+      user: req.user._id // This would be set by the auth middleware
+    });
+  } catch (error) {
+    console.error('Error creating reservation:', error);
+    res.status(500).json({ message: 'Failed to create reservation', error: error.message });
+  }
+});
+
+// Update reservation
+router.put('/:id', protect, (req, res) => {
+  try {
+    const { resourceId, startTime, endTime, purpose } = req.body;
+    const reservationId = req.params.id;
+    
+    // Validate required fields
+    if (!resourceId) {
+      return res.status(400).json({ message: 'Resource ID is required' });
+    }
+    
+    if (!startTime) {
+      return res.status(400).json({ message: 'Start time is required' });
+    }
+    
+    if (!endTime) {
+      return res.status(400).json({ message: 'End time is required' });
+    }
+    
+    if (!purpose) {
+      return res.status(400).json({ message: 'Purpose is required' });
+    }
+    
+    // Check if end time is after start time
+    if (new Date(endTime) <= new Date(startTime)) {
+      return res.status(400).json({ message: 'End time must be after start time' });
+    }
+    
+    // In a real app, you would update in the database here
+    console.log(`Updating reservation ${reservationId}:`, req.body);
+    
+    // Return updated reservation
+    res.json({
+      id: reservationId,
+      resourceId,
+      startTime,
+      endTime,
+      purpose,
+      status: 'pending',
+      user: req.user._id // This would be set by the auth middleware
+    });
+  } catch (error) {
+    console.error(`Error updating reservation ${req.params.id}:`, error);
+    res.status(500).json({ message: 'Failed to update reservation', error: error.message });
+  }
+});
+
+// Cancel/delete reservation
+router.delete('/:id', protect, (req, res) => {
+  try {
+    const reservationId = req.params.id;
+    
+    // In a real app, you would delete from database here
+    console.log(`Deleting reservation ${reservationId}`);
+    
+    // Return success message
+    res.json({ message: 'Reservation cancelled successfully' });
+  } catch (error) {
+    console.error(`Error deleting reservation ${req.params.id}:`, error);
+    res.status(500).json({ message: 'Failed to cancel reservation', error: error.message });
+  }
+});
+
+// Check for reservation conflicts
+router.post('/check-conflicts', protect, (req, res) => {
+  try {
+    const { resourceId, startTime, endTime } = req.body;
+    
+    // In a real app, you would check database for conflicts
+    console.log('Checking conflicts for:', { resourceId, startTime, endTime });
+    
+    // Return mock conflict check result (no conflicts)
+    res.json({
+      hasConflicts: false,
+      conflicts: []
+    });
+  } catch (error) {
+    console.error('Error checking for conflicts:', error);
+    res.status(500).json({ message: 'Failed to check for conflicts', error: error.message });
+  }
 });
 
 module.exports = router; 

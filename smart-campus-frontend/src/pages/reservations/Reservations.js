@@ -21,7 +21,7 @@ import {
     Typography,
 } from '@mui/material';
 import React, { useCallback, useEffect, useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { Controller, useForm } from 'react-hook-form';
 import reservationService from '../../services/api/reservationService';
 
 const Reservations = () => {
@@ -37,6 +37,7 @@ const Reservations = () => {
     register,
     handleSubmit,
     reset,
+    control,
     formState: { errors, isSubmitting },
   } = useForm();
 
@@ -126,11 +127,30 @@ const Reservations = () => {
   const openDialog = (reservation) => {
     setSelectedReservation(reservation);
     if (reservation) {
-      reset(reservation);
+      // Format dates for the form
+      const formattedReservation = {
+        ...reservation,
+        startTime: formatDateTimeForInput(reservation.startTime),
+        endTime: formatDateTimeForInput(reservation.endTime)
+      };
+      reset(formattedReservation);
     } else {
       reset({});
     }
     setOpen(true);
+  };
+
+  // Helper to format date for datetime-local input
+  const formatDateTimeForInput = (dateString) => {
+    if (!dateString) return '';
+    
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return '';
+    
+    // Format: YYYY-MM-DDThh:mm
+    return new Date(date.getTime() - (date.getTimezoneOffset() * 60000))
+      .toISOString()
+      .slice(0, 16);
   };
 
   const handleClose = () => {
@@ -143,16 +163,74 @@ const Reservations = () => {
   const onSubmit = async (data) => {
     try {
       setError(null);
+      
+      // Validate required fields
+      if (!data.resourceId) {
+        setError('Please select a resource');
+        return;
+      }
+      
+      if (!data.startTime) {
+        setError('Please specify a start time');
+        return;
+      }
+      
+      if (!data.endTime) {
+        setError('Please specify an end time');
+        return;
+      }
+      
+      if (!data.purpose) {
+        setError('Please specify a purpose');
+        return;
+      }
+      
+      // Check if end time is after start time
+      if (new Date(data.endTime) <= new Date(data.startTime)) {
+        setError('End time must be after start time');
+        return;
+      }
+      
+      // Format dates for API
+      const formattedStartTime = new Date(data.startTime).toISOString();
+      const formattedEndTime = new Date(data.endTime).toISOString();
+      
+      // Check for conflicts before saving
+      try {
+        const availabilityCheck = await reservationService.getResourceAvailability(
+          data.resourceId,
+          formattedStartTime,
+          formattedEndTime
+        );
+        
+        if (!availabilityCheck.available) {
+          setError('This resource is not available during the selected time. Please choose a different time or resource.');
+          return;
+        }
+      } catch (err) {
+        console.error('Error checking resource availability:', err);
+        // Continue with submission even if availability check fails
+      }
+      
+      // Ensure dates are properly parsed into Date objects
+      const formattedData = {
+        ...data,
+        startTime: formattedStartTime,
+        endTime: formattedEndTime,
+      };
+      
+      console.log('Submitting reservation data:', formattedData);
+      
       if (selectedReservation) {
-        await reservationService.updateReservation(selectedReservation.id, data);
+        await reservationService.updateReservation(selectedReservation.id, formattedData);
       } else {
-        await reservationService.createReservation(data);
+        await reservationService.createReservation(formattedData);
       }
       loadData();
       handleClose();
     } catch (error) {
       console.error('Error saving reservation:', error);
-      setError(error.response?.data?.message || 'Failed to save reservation');
+      setError(error.response?.data?.message || error.message || 'Failed to save reservation. Please try again.');
     }
   };
 
@@ -274,25 +352,53 @@ const Reservations = () => {
                 ))}
               </TextField>
             )}
-            <TextField
-              fullWidth
-              label="Start Time"
-              margin="normal"
-              type="datetime-local"
-              InputLabelProps={{ shrink: true }}
-              {...register('startTime', { required: 'Start time is required' })}
-              error={!!errors.startTime}
-              helperText={errors.startTime?.message}
+            <Controller
+              name="startTime"
+              control={control}
+              rules={{ 
+                required: 'Start time is required',
+                validate: {
+                  hasTimeComponent: value => (!!value && value.includes('T')) || 'Please select both date and time'
+                }
+              }}
+              render={({ field }) => (
+                <TextField
+                  {...field}
+                  fullWidth
+                  label="Start Time"
+                  margin="normal"
+                  type="datetime-local"
+                  InputLabelProps={{ shrink: true }}
+                  error={!!errors.startTime}
+                  helperText={errors.startTime?.message}
+                />
+              )}
             />
-            <TextField
-              fullWidth
-              label="End Time"
-              margin="normal"
-              type="datetime-local"
-              InputLabelProps={{ shrink: true }}
-              {...register('endTime', { required: 'End time is required' })}
-              error={!!errors.endTime}
-              helperText={errors.endTime?.message}
+            <Controller
+              name="endTime"
+              control={control}
+              rules={{ 
+                required: 'End time is required',
+                validate: {
+                  hasTimeComponent: value => (!!value && value.includes('T')) || 'Please select both date and time',
+                  isAfterStart: (value, { startTime }) => {
+                    if (!startTime || !value) return true;
+                    return new Date(value) > new Date(startTime) || 'End time must be after start time';
+                  }
+                }
+              }}
+              render={({ field }) => (
+                <TextField
+                  {...field}
+                  fullWidth
+                  label="End Time"
+                  margin="normal"
+                  type="datetime-local"
+                  InputLabelProps={{ shrink: true }}
+                  error={!!errors.endTime}
+                  helperText={errors.endTime?.message}
+                />
+              )}
             />
             <TextField
               fullWidth
