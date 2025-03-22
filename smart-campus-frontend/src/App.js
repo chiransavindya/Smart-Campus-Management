@@ -1,10 +1,11 @@
 import CssBaseline from '@mui/material/CssBaseline';
-import { ThemeProvider, createTheme } from '@mui/material/styles';
+import { ThemeProvider } from '@mui/material/styles';
 import React from 'react';
 import { Navigate, Route, BrowserRouter as Router, Routes } from 'react-router-dom';
 import ProtectedRoute from './components/common/ProtectedRoute';
 import MainLayout from './components/layout/MainLayout';
 import { AuthProvider } from './context/AuthContext';
+import { lightTheme } from './styles/theme';
 
 // Pages
 import AdminDashboard from './pages/admin/AdminDashboard';
@@ -16,22 +17,9 @@ import Events from './pages/events/Events';
 import Reservations from './pages/reservations/Reservations';
 import Schedule from './pages/schedule/Schedule';
 
-// Create theme
-const theme = createTheme({
-  palette: {
-    mode: 'light',
-    primary: {
-      main: '#1976d2',
-    },
-    secondary: {
-      main: '#9c27b0',
-    },
-  },
-});
-
 function App() {
   return (
-    <ThemeProvider theme={theme}>
+    <ThemeProvider theme={lightTheme}>
       <CssBaseline />
       <AuthProvider>
         <Router>

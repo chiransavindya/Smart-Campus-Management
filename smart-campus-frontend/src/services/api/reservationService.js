@@ -20,8 +20,13 @@ api.interceptors.request.use((config) => {
 export const reservationService = {
   // Get all resources
   getAllResources: async () => {
-    const response = await api.get('/resources');
-    return response.data;
+    try {
+      const response = await api.get('/resources');
+      return Array.isArray(response.data) ? response.data : [];
+    } catch (error) {
+      console.error('Error fetching resources:', error);
+      return [];
+    }
   },
 
   // Get resource by ID
@@ -58,14 +63,25 @@ export const reservationService = {
 
   // Get user's reservations
   getUserReservations: async () => {
-    const response = await api.get('/reservations/user');
-    return response.data;
+    try {
+      const response = await api.get('/reservations');
+      // Make sure we always return an array
+      return Array.isArray(response.data) ? response.data : [];
+    } catch (error) {
+      console.error('Error fetching user reservations:', error);
+      return [];
+    }
   },
 
   // Get resource reservations
   getResourceReservations: async (resourceId) => {
-    const response = await api.get(`/reservations/resource/${resourceId}`);
-    return response.data;
+    try {
+      const response = await api.get(`/reservations/resource/${resourceId}`);
+      return Array.isArray(response.data) ? response.data : [];
+    } catch (error) {
+      console.error('Error fetching resource reservations:', error);
+      return [];
+    }
   },
 
   // Check for reservation conflicts

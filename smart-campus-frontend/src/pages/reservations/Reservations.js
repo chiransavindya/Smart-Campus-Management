@@ -9,6 +9,7 @@ import {
     Button,
     Card,
     CardContent,
+    CircularProgress,
     Dialog,
     DialogActions,
     DialogContent,
@@ -19,7 +20,7 @@ import {
     TextField,
     Typography,
 } from '@mui/material';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import reservationService from '../../services/api/reservationService';
 
@@ -29,33 +30,100 @@ const Reservations = () => {
   const [open, setOpen] = useState(false);
   const [selectedReservation, setSelectedReservation] = useState(null);
   const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [resourcesLoading, setResourcesLoading] = useState(false);
 
   const {
     register,
     handleSubmit,
     reset,
-    formState: { errors },
+    formState: { errors, isSubmitting },
   } = useForm();
+
+  // Using useCallback to memoize the loadResources function
+  const loadResources = useCallback(async () => {
+    setResourcesLoading(true);
+    try {
+      const resourcesData = await reservationService.getAllResources();
+      
+      // Ensure resourcesData is an array
+      if (Array.isArray(resourcesData)) {
+        setResources(resourcesData);
+      } else {
+        console.error('Resources data is not an array:', resourcesData);
+        setResources([]);
+        setError('Invalid resource data format received from server');
+      }
+      
+    } catch (error) {
+      console.error('Error loading resources:', error);
+      setResources([]);
+      setError('Failed to load resources. Please try again later.');
+    } finally {
+      setResourcesLoading(false);
+    }
+  }, []);
+
+  // Using useCallback to memoize the loadData function
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      // Load reservations and resources separately to handle errors more gracefully
+      const reservationsData = await reservationService.getUserReservations();
+      
+      // Ensure reservationsData is an array
+      if (Array.isArray(reservationsData)) {
+        setReservations(reservationsData);
+      } else {
+        console.error('Reservations data is not an array:', reservationsData);
+        setReservations([]);
+        setError('Invalid reservation data format received from server');
+      }
+      
+      // Now load resources
+      await loadResources();
+    } catch (error) {
+      console.error('Error loading reservations:', error);
+      setReservations([]);
+      setError('Failed to load reservations. Please try again later.');
+    } finally {
+      setLoading(false);
+    }
+  }, [loadResources]);
 
   useEffect(() => {
     loadData();
-  }, []);
-
-  const loadData = async () => {
-    try {
-      const [resourcesData, reservationsData] = await Promise.all([
-        reservationService.getAllResources(),
-        reservationService.getUserReservations(),
-      ]);
-      setResources(resourcesData);
-      setReservations(reservationsData);
-    } catch (error) {
-      console.error('Error loading data:', error);
-      setError('Failed to load resources and reservations');
-    }
-  };
+  }, [loadData]); // Now properly including loadData as a dependency
 
   const handleOpen = (reservation = null) => {
+    // Ensure resources are loaded before opening the dialog
+    if (resources.length === 0) {
+      setResourcesLoading(true);
+      reservationService.getAllResources()
+        .then(data => {
+          if (Array.isArray(data)) {
+            setResources(data);
+          } else {
+            console.error('Resources data is not an array:', data);
+            setResources([]);
+            setError('Failed to load resources: Invalid data format');
+          }
+          openDialog(reservation);
+        })
+        .catch(error => {
+          console.error('Error loading resources:', error);
+          setError('Failed to load resources. Please try again later.');
+        })
+        .finally(() => {
+          setResourcesLoading(false);
+        });
+    } else {
+      openDialog(reservation);
+    }
+  };
+  
+  const openDialog = (reservation) => {
     setSelectedReservation(reservation);
     if (reservation) {
       reset(reservation);
@@ -105,6 +173,9 @@ const Reservations = () => {
     return resource ? resource.name : 'Unknown Resource';
   };
 
+  // Ensure reservations is an array before rendering
+  const reservationsArray = Array.isArray(reservations) ? reservations : [];
+
   return (
     <Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
@@ -124,43 +195,53 @@ const Reservations = () => {
         </Alert>
       )}
 
-      <Grid container spacing={3}>
-        {reservations.map((reservation) => (
-          <Grid item xs={12} sm={6} md={4} key={reservation.id}>
-            <Card>
-              <CardContent>
-                <Typography variant="h6" gutterBottom>
-                  {getResourceName(reservation.resourceId)}
-                </Typography>
-                <Typography color="textSecondary" gutterBottom>
-                  {new Date(reservation.startTime).toLocaleString()} -{' '}
-                  {new Date(reservation.endTime).toLocaleString()}
-                </Typography>
-                <Typography variant="body2" color="textSecondary">
-                  Status: {reservation.status}
-                </Typography>
-                <Typography variant="body2" color="textSecondary" sx={{ mt: 1 }}>
-                  Purpose: {reservation.purpose}
-                </Typography>
-              </CardContent>
-              <CardContent>
-                <IconButton
-                  size="small"
-                  onClick={() => handleOpen(reservation)}
-                >
-                  <EditIcon />
-                </IconButton>
-                <IconButton
-                  size="small"
-                  onClick={() => handleDelete(reservation.id)}
-                >
-                  <DeleteIcon />
-                </IconButton>
-              </CardContent>
-            </Card>
-          </Grid>
-        ))}
-      </Grid>
+      {loading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
+          <CircularProgress />
+        </Box>
+      ) : reservationsArray.length === 0 ? (
+        <Alert severity="info" sx={{ mb: 2 }}>
+          You have no reservations yet. Click "Make Reservation" to create one.
+        </Alert>
+      ) : (
+        <Grid container spacing={3}>
+          {reservationsArray.map((reservation) => (
+            <Grid item xs={12} sm={6} md={4} key={reservation.id}>
+              <Card>
+                <CardContent>
+                  <Typography variant="h6" gutterBottom>
+                    {getResourceName(reservation.resourceId)}
+                  </Typography>
+                  <Typography color="textSecondary" gutterBottom>
+                    {new Date(reservation.startTime).toLocaleString()} -{' '}
+                    {new Date(reservation.endTime).toLocaleString()}
+                  </Typography>
+                  <Typography variant="body2" color="textSecondary">
+                    Status: {reservation.status}
+                  </Typography>
+                  <Typography variant="body2" color="textSecondary" sx={{ mt: 1 }}>
+                    Purpose: {reservation.purpose}
+                  </Typography>
+                </CardContent>
+                <CardContent>
+                  <IconButton
+                    size="small"
+                    onClick={() => handleOpen(reservation)}
+                  >
+                    <EditIcon />
+                  </IconButton>
+                  <IconButton
+                    size="small"
+                    onClick={() => handleDelete(reservation.id)}
+                  >
+                    <DeleteIcon />
+                  </IconButton>
+                </CardContent>
+              </Card>
+            </Grid>
+          ))}
+        </Grid>
+      )}
 
       <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
         <DialogTitle>
@@ -168,21 +249,31 @@ const Reservations = () => {
         </DialogTitle>
         <form onSubmit={handleSubmit(onSubmit)}>
           <DialogContent>
-            <TextField
-              fullWidth
-              select
-              label="Resource"
-              margin="normal"
-              {...register('resourceId', { required: 'Resource is required' })}
-              error={!!errors.resourceId}
-              helperText={errors.resourceId?.message}
-            >
-              {resources.map((resource) => (
-                <MenuItem key={resource.id} value={resource.id}>
-                  {resource.name}
-                </MenuItem>
-              ))}
-            </TextField>
+            {resourcesLoading ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', my: 2 }}>
+                <CircularProgress size={24} />
+              </Box>
+            ) : resources.length === 0 ? (
+              <Alert severity="error" sx={{ mb: 2 }}>
+                Failed to load resources. Please try again.
+              </Alert>
+            ) : (
+              <TextField
+                fullWidth
+                select
+                label="Resource"
+                margin="normal"
+                {...register('resourceId', { required: 'Resource is required' })}
+                error={!!errors.resourceId}
+                helperText={errors.resourceId?.message}
+              >
+                {resources.map((resource) => (
+                  <MenuItem key={resource.id} value={resource.id}>
+                    {resource.name}
+                  </MenuItem>
+                ))}
+              </TextField>
+            )}
             <TextField
               fullWidth
               label="Start Time"
@@ -215,9 +306,13 @@ const Reservations = () => {
             />
           </DialogContent>
           <DialogActions>
-            <Button onClick={handleClose}>Cancel</Button>
-            <Button type="submit" variant="contained">
-              {selectedReservation ? 'Update' : 'Reserve'}
+            <Button onClick={handleClose} disabled={isSubmitting}>Cancel</Button>
+            <Button 
+              type="submit" 
+              variant="contained" 
+              disabled={isSubmitting || resources.length === 0}
+            >
+              {isSubmitting ? <CircularProgress size={24} /> : selectedReservation ? 'Update' : 'Reserve'}
             </Button>
           </DialogActions>
         </form>
