@@ -146,6 +146,7 @@ const Register = () => {
             >
               <MenuItem value="student">Student</MenuItem>
               <MenuItem value="lecturer">Lecturer</MenuItem>
+              <MenuItem value="admin">Administrator</MenuItem>
             </TextField>
             <Button
               type="submit"
