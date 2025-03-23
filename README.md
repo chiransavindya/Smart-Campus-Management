@@ -7,14 +7,6 @@
 
 <p align="center">A comprehensive digital platform that streamlines campus operations, enhances communication, and provides valuable resources for students, faculty, and administrators.</p>
 
-<div align="center">
-  
-| Frontend | Backend | Database & Authentication |
-|:--------:|:-------:|:--------------------------:|
-| <img src="https://img.shields.io/badge/react-%2320232a.svg?style=for-the-badge&logo=react&logoColor=%2361DAFB" alt="React"><br><img src="https://img.shields.io/badge/material--ui-%230081CB.svg?style=for-the-badge&logo=material-ui&logoColor=white" alt="Material UI"> | <img src="https://img.shields.io/badge/node.js-6DA55F?style=for-the-badge&logo=node.js&logoColor=white" alt="Node.js"><br><img src="https://img.shields.io/badge/express.js-%23404d59.svg?style=for-the-badge&logo=express&logoColor=%2361DAFB" alt="Express.js"> | <img src="https://img.shields.io/badge/MongoDB-%234ea94b.svg?style=for-the-badge&logo=mongodb&logoColor=white" alt="MongoDB"><br><img src="https://img.shields.io/badge/JWT-black?style=for-the-badge&logo=JSON%20web%20tokens" alt="JWT"> |
-
-</div>
-
 ## 📋 Table of Contents
 
 - [🔍 Overview](#-overview)
