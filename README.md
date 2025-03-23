@@ -1,11 +1,11 @@
 # Smart Campus Management System
 
-<p align="center">
+<p align="">
   <img src="https://img.shields.io/badge/status-active-success.svg" alt="Status">
   <img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License">
 </p>
 
-<p align="center">A comprehensive digital platform that streamlines campus operations, enhances communication, and provides valuable resources for students, faculty, and administrators.</p>
+A comprehensive digital platform that streamlines campus operations, enhances communication, and provides valuable resources for students, faculty, and administrators.
 
 ## 📋 Table of Contents
 
