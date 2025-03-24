@@ -32,19 +32,57 @@ api.interceptors.response.use(
 export const reservationService = {
   // Get all resources
   getAllResources: async () => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+    
     try {
-      const response = await api.get('/resources');
-      return Array.isArray(response.data) ? response.data : [];
+      console.log('Fetching resources from API...');
+      const response = await api.get('/reservations/resources', {
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
+      
+      if (Array.isArray(response.data)) {
+        console.log(`API returned ${response.data.length} resources`);
+        return response.data;
+      } else {
+        console.error('API returned non-array data for resources:', response.data);
+        throw new Error('Invalid response format: Resources data is not an array');
+      }
     } catch (error) {
+      clearTimeout(timeoutId);
       console.error('Error fetching resources:', error);
-      return [];
+      
+      // Provide more specific error messages based on the error type
+      if (error.name === 'AbortError') {
+        throw new Error('Request timeout: Could not fetch resources within the time limit.');
+      } else if (error.code === 'ECONNABORTED' || !error.response) {
+        throw new Error('Could not connect to the server. Please check your internet connection.');
+      } else if (error.response?.status === 401) {
+        throw new Error('Authentication required. Please log in again.');
+      } else if (error.response?.status === 403) {
+        throw new Error('You do not have permission to access resources.');
+      } else if (error.response?.status === 404) {
+        throw new Error('Resource endpoint not found. The API may have changed.');
+      } else if (error.response?.status >= 500) {
+        throw new Error('Server error. Please try again later or contact support.');
+      }
+      
+      // If we have a specific error message from the server, use it
+      if (error.response?.data?.message) {
+        throw new Error(`Server error: ${error.response.data.message}`);
+      }
+      
+      // Default error
+      throw error;
     }
   },
 
   // Get resource by ID
   getResourceById: async (id) => {
     try {
-      const response = await api.get(`/resources/${id}`);
+      const response = await api.get(`/reservations/resources/${id}`);
       return response.data;
     } catch (error) {
       console.error(`Error fetching resource with ID ${id}:`, error);
@@ -58,7 +96,7 @@ export const reservationService = {
       const formattedStartDate = startDate ? new Date(startDate).toISOString() : null;
       const formattedEndDate = endDate ? new Date(endDate).toISOString() : null;
       
-      const response = await api.get(`/resources/${resourceId}/availability`, {
+      const response = await api.get(`/reservations/resources/${resourceId}/availability`, {
         params: { 
           startDate: formattedStartDate, 
           endDate: formattedEndDate 

@@ -11,7 +11,7 @@ const Dashboard = () => {
     if (!loading && user) {
       switch (user.role) {
         case 'admin':
-          navigate('/admin/dashboard', { replace: true });
+          navigate('/admin/overview', { replace: true });
           break;
         case 'lecturer':
           navigate('/lecturer/dashboard', { replace: true });

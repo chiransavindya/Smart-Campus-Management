@@ -2,17 +2,24 @@ import Box from '@mui/material/Box';
 import CssBaseline from '@mui/material/CssBaseline';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 import React from 'react';
-import { Navigate, Route, BrowserRouter as Router, Routes } from 'react-router-dom';
+import { Navigate, Route, BrowserRouter as Router, Routes, useLocation } from 'react-router-dom';
 
 // Auth components
 import { AuthProvider, useAuth } from './context/AuthContext';
 import ForgotPassword from './pages/auth/ForgotPassword';
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
+import Unauthorized from './pages/auth/Unauthorized';
 
 // Layout components
+import AdminLayout from './components/layout/AdminLayout';
 import Navigation from './components/Navigation';
-import AdminDashboard from './pages/admin/AdminDashboard';
+import EventManagement from './pages/admin/EventManagement';
+import Overview from './pages/admin/Overview';
+import ResourceManagement from './pages/admin/ResourceManagement';
+import SecurityCompliance from './pages/admin/SecurityCompliance';
+import SystemSettings from './pages/admin/SystemSettings';
+import UserManagement from './pages/admin/UserManagement';
 import Dashboard from './pages/dashboard/Dashboard';
 import LecturerDashboard from './pages/lecturer/LecturerDashboard';
 import StudentDashboard from './pages/student/StudentDashboard';
@@ -36,15 +43,22 @@ const theme = createTheme({
 });
 
 // Protected Route Component
-const ProtectedRoute = ({ children }) => {
-  const { isAuthenticated, loading } = useAuth();
+const ProtectedRoute = ({ children, allowedRoles = [] }) => {
+  const { isAuthenticated, user, loading } = useAuth();
+  const location = useLocation();
 
   if (loading) {
     return <Box>Loading...</Box>;
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+    // Redirect to login and remember where they were trying to go
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  if (allowedRoles.length > 0 && !allowedRoles.includes(user.role)) {
+    // Redirect to unauthorized page if user doesn't have the required role
+    return <Navigate to="/unauthorized" replace />;
   }
 
   return (
@@ -53,21 +67,6 @@ const ProtectedRoute = ({ children }) => {
       {children}
     </>
   );
-};
-
-// Role-based Route Component
-const RoleRoute = ({ allowedRoles, children }) => {
-  const { user, loading } = useAuth();
-
-  if (loading) {
-    return <Box>Loading...</Box>;
-  }
-
-  if (!user || !allowedRoles.includes(user.role)) {
-    return <Navigate to="/dashboard" replace />;
-  }
-
-  return children;
 };
 
 function App() {
@@ -81,6 +80,7 @@ function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/unauthorized" element={<Unauthorized />} />
             
             {/* Dashboard - redirects to role-specific dashboard */}
             <Route
@@ -94,12 +94,78 @@ function App() {
             
             {/* Admin Routes */}
             <Route
-              path="/admin/*"
+              path="/admin"
               element={
-                <ProtectedRoute>
-                  <RoleRoute allowedRoles={['admin']}>
-                    <AdminDashboard />
-                  </RoleRoute>
+                <ProtectedRoute allowedRoles={['admin']}>
+                  <Navigate to="/admin/overview" replace />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/dashboard"
+              element={
+                <ProtectedRoute allowedRoles={['admin']}>
+                  <Navigate to="/admin/overview" replace />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/overview"
+              element={
+                <ProtectedRoute allowedRoles={['admin']}>
+                  <AdminLayout>
+                    <Overview />
+                  </AdminLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/users"
+              element={
+                <ProtectedRoute allowedRoles={['admin']}>
+                  <AdminLayout>
+                    <UserManagement />
+                  </AdminLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/resources"
+              element={
+                <ProtectedRoute allowedRoles={['admin']}>
+                  <AdminLayout>
+                    <ResourceManagement />
+                  </AdminLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/events"
+              element={
+                <ProtectedRoute allowedRoles={['admin']}>
+                  <AdminLayout>
+                    <EventManagement />
+                  </AdminLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/security"
+              element={
+                <ProtectedRoute allowedRoles={['admin']}>
+                  <AdminLayout>
+                    <SecurityCompliance />
+                  </AdminLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/settings"
+              element={
+                <ProtectedRoute allowedRoles={['admin']}>
+                  <AdminLayout>
+                    <SystemSettings />
+                  </AdminLayout>
                 </ProtectedRoute>
               }
             />
@@ -108,10 +174,16 @@ function App() {
             <Route
               path="/student/*"
               element={
-                <ProtectedRoute>
-                  <RoleRoute allowedRoles={['student']}>
-                    <StudentDashboard />
-                  </RoleRoute>
+                <ProtectedRoute allowedRoles={['student']}>
+                  <StudentDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/student/dashboard"
+              element={
+                <ProtectedRoute allowedRoles={['student']}>
+                  <StudentDashboard />
                 </ProtectedRoute>
               }
             />
@@ -120,10 +192,16 @@ function App() {
             <Route
               path="/lecturer/*"
               element={
-                <ProtectedRoute>
-                  <RoleRoute allowedRoles={['lecturer']}>
-                    <LecturerDashboard />
-                  </RoleRoute>
+                <ProtectedRoute allowedRoles={['lecturer']}>
+                  <LecturerDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/lecturer/dashboard"
+              element={
+                <ProtectedRoute allowedRoles={['lecturer']}>
+                  <LecturerDashboard />
                 </ProtectedRoute>
               }
             />

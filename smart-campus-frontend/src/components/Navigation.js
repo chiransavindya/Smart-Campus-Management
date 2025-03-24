@@ -1,6 +1,7 @@
 import {
-    Assignment,
+    Assessment,
     Book,
+    Business,
     CalendarMonth,
     ChevronLeft,
     Dashboard,
@@ -11,8 +12,8 @@ import {
     Menu as MenuIcon,
     Notifications,
     Person,
-    Settings,
-    TableChart
+    Security,
+    Settings
 } from '@mui/icons-material';
 import {
     AppBar,
@@ -74,19 +75,9 @@ const Navigation = () => {
     handleCloseUserMenu();
   };
 
-  const handleSettings = () => {
-    // Navigate to settings page when implemented
-    handleCloseUserMenu();
-  };
-
   // Define menu items based on user role
   const getMenuItems = () => {
     const commonItems = [
-      {
-        text: 'Dashboard',
-        path: '/dashboard',
-        icon: <Dashboard />
-      },
       {
         text: 'Events',
         path: '/events',
@@ -103,8 +94,8 @@ const Navigation = () => {
     const roleItems = {
       admin: [
         {
-          text: 'Admin Dashboard',
-          path: '/admin',
+          text: 'Admin Overview',
+          path: '/admin/overview',
           icon: <Dashboard />
         },
         {
@@ -115,7 +106,22 @@ const Navigation = () => {
         {
           text: 'Resource Management',
           path: '/admin/resources',
-          icon: <TableChart />
+          icon: <Business />
+        },
+        {
+          text: 'Event Management',
+          path: '/admin/events',
+          icon: <Event />
+        },
+        {
+          text: 'Security & Compliance',
+          path: '/admin/security',
+          icon: <Security />
+        },
+        {
+          text: 'System Settings',
+          path: '/admin/settings',
+          icon: <Settings />
         }
       ],
       lecturer: [
@@ -144,7 +150,7 @@ const Navigation = () => {
         {
           text: 'Class Registration',
           path: '/student/registration',
-          icon: <Assignment />
+          icon: <Assessment />
         },
         {
           text: 'Grades',
@@ -218,7 +224,7 @@ const Navigation = () => {
             
             {/* User Menu */}
             <Box sx={{ ml: 2 }}>
-              <Tooltip title="Open settings">
+              <Tooltip title="Account">
                 <IconButton onClick={handleOpenUserMenu} sx={{ p: 0 }}>
                   <Avatar 
                     alt={user?.name || 'User'} 
@@ -247,12 +253,6 @@ const Navigation = () => {
                     <Person fontSize="small" />
                   </ListItemIcon>
                   <Typography textAlign="center">Profile</Typography>
-                </MenuItem>
-                <MenuItem onClick={handleSettings}>
-                  <ListItemIcon>
-                    <Settings fontSize="small" />
-                  </ListItemIcon>
-                  <Typography textAlign="center">Settings</Typography>
                 </MenuItem>
                 <Divider />
                 <MenuItem onClick={handleLogout}>
